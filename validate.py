@@ -3,6 +3,7 @@ import argparse
 import os
 import sys
 from collections import OrderedDict
+from itertools import zip_longest
 
 try:
     import xlrd
@@ -30,7 +31,7 @@ def _cli():
 
 def first_difference(str1, str2):
     """Find first difference between two strings and return index, and character which is different"""
-    for idx, (sh, fi) in enumerate(zip(str1, str2)):
+    for idx, (sh, fi) in enumerate(zip_longest(str1, str2)):
         if sh != fi:
             return idx
     return -1
@@ -58,6 +59,7 @@ def xls_search(sheet):
 
     return filename_in_sheet
 
+def
 
 
 def validate_sheet_duplicates(file_names):

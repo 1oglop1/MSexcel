@@ -70,6 +70,9 @@ def values_to_correct(input_file):
         for line in inf:
             try:
                 file_in_sheet, file_in_folder, corrected_value = line.strip().split('|')
+                # if corrected value is a start, use file name from folder
+                if corrected_value == '*':
+                    corrected_value = file_in_folder
             except ValueError:
                 corrected_value = None
 
