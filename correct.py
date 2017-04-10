@@ -18,6 +18,9 @@ except ImportError as e:
     print('Maybe "pip install xlrd xlwt xlutils", would help.')
     sys.exit(1)
 
+
+
+
 def _cli():
     parser = argparse.ArgumentParser(
             description=__doc__,
@@ -55,13 +58,15 @@ def parse_position(string):
         position = make_tuple(string[start:stop])
         return position
 
-    return False
+    return None
 
 
 def values_to_correct(input_file):
     """Read report_ file and return dictionary of values to be corrected
     :return: dictionary {(row, col): corrected_name}"""
     to_be_corrected = {}
+    correct_maually = {}
+    pos_error_cnt = 0
 
     with open(input_file, 'r') as inf:
         # Check header # maybe later
@@ -80,27 +85,32 @@ def values_to_correct(input_file):
                 # if the filename has been corrected change the name of file
                 line2 = inf.readline()
                 pos = parse_position(line2)
-                to_be_corrected[pos] = corrected_value
+                if pos:
+                    to_be_corrected[pos] = corrected_value
+                else:
+                    print(pos, file_in_folder, file_in_sheet)
+                    correct_maually[pos_error_cnt] = (file_in_sheet, file_in_folder)
+
                 #                 print("chaging:{0} => {1}".format(file_in_folder, corrected_value))
 
-    return to_be_corrected
+    return correct_maually, to_be_corrected
 
 
 
-def main(*args, **kwargs):
+def main(working_directory, excel_file, out_file, overwrite, *args, **kwargs):
 
-    WORKING_FOLDER = os.path.abspath(kwargs['working_directory'])
+    WORKING_FOLDER = os.path.abspath(working_directory)
 
 
-    WB_FILE = os.path.abspath(os.path.join(WORKING_FOLDER, kwargs['excel_file']))  # excel file
+    WB_FILE = os.path.abspath(os.path.join(WORKING_FOLDER, excel_file))  # excel file
     report_file_name = os.path.basename(WB_FILE)
     report_file_name = "report_{xls_file}.txt".format(xls_file=report_file_name[:report_file_name.rfind('.')])
     REPORT_FILE = os.path.join(WORKING_FOLDER, report_file_name)
 
-    if kwargs['overwrite']:
+    if overwrite:
         OUTPUT_FILE = WB_FILE
     else:
-        OUTPUT_FILE = os.path.abspath(kwargs['out_file'])
+        OUTPUT_FILE = os.path.abspath(out_file)
 
     # open work_book to read
     read_book = xlrd.open_workbook(WB_FILE, formatting_info=True)
@@ -115,17 +125,28 @@ def main(*args, **kwargs):
     print(REPORT_FILE)
 
     # get correct values from report_ file
-    correct_values = values_to_correct(REPORT_FILE)
-
+    manually_correct, correct_values = values_to_correct(REPORT_FILE)
+    
     print('Writing changes')
+
     for (row, col), value in correct_values.items():
-        print(row - 1, col, value)
+        print('corrected:',row - 1, col, value)
         write_sheet.write(row - 1, col, value)
 
-    write_book.save(OUTPUT_FILE)
+
+    # write_book.save(OUTPUT_FILE)
     print("Saved to:")
     print(OUTPUT_FILE)
 
+    # write manual corrections
+    if manually_correct:
+        print("Please fix these values manually.")
+        print('Sheet name | File name')
+        for corr_id, corr_val in manually_correct.items():
+            msg = '{cid}: {sh} | {fi}'.format(cid=corr_id,
+                                              sh=corr_val[0],
+                                              fi=corr_val[1])
+            print(msg)
 
 
 if __name__ == '__main__':
